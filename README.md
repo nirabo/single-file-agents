@@ -242,30 +242,76 @@ uv run sfa_meta_prompt_openai_v1.py
 ### Ollama Delegator Agent
 > (sfa_ollama_delegator_agent.py)
 
-An AI assistant that uses a primary LLM (e.g., Anthropic Claude) to understand user requests and can delegate specific text generation or analysis tasks to a locally running Ollama instance. The primary LLM then processes or reflects on the output from the local Ollama model.
+An AI assistant that can use either a locally hosted Ollama model or a cloud-based LLM (like Anthropic Claude) as its primary intelligence. It understands user requests and can delegate specific sub-tasks (like text generation or analysis) to another locally running Ollama model via a dedicated tool. The primary LLM then processes or reflects on the output from this delegate Ollama model.
+
+Configuration is managed via an `.env` file, with command-line arguments providing overrides.
 
 Prerequisites:
 - Ollama installed and running (see [ollama.com](https://ollama.com/)).
-- At least one model pulled in your local Ollama instance (e.g., `ollama pull llama3`).
-- `ANTHROPIC_API_KEY` environment variable must be set for the primary LLM.
-- `OLLAMA_BASE_URL` environment variable (optional, defaults to `http://localhost:11434` if not set).
+- At least one model pulled in your local Ollama instance (e.g., `ollama pull llama3`, `ollama pull gemma2:9b`).
+- An `.env` file created from the `.env.sample` (see setup below).
+- `ANTHROPIC_API_KEY` environment variable is only required if you set `PRIMARY_LLM_PROVIDER="anthropic"` in your `.env` file or via CLI.
+- The `python-dotenv` dependency is included in the script and handled automatically by `uv`.
 
-Example Usage:
-```bash
-# Ensure Ollama is running and you have a model like 'llama3'
-# export ANTHROPIC_API_KEY="your_anthropic_key"
-# export OLLAMA_BASE_URL="http://localhost:11434" # Optional if Ollama is at default URL
+#### `.env` File Setup
+1.  Copy the `.env.sample` file to `.env` in the root of this repository.
+2.  Edit `.env` to configure the agent. Key variables include:
+    *   `PRIMARY_LLM_PROVIDER`: Set to "ollama" (default) to use a local Ollama model as the primary LLM, or "anthropic" to use Anthropic Claude.
+    *   `OLLAMA_BASE_URL`: URL for your Ollama instance (e.g., `http://localhost:11434`).
+    *   `OLLAMA_PRIMARY_MODEL_NAME`: Model to use if `PRIMARY_LLM_PROVIDER="ollama"` (e.g., `gemma2:9b`, `llama3`).
+    *   `OLLAMA_DEFAULT_DELEGATE_MODEL_NAME`: Default model for the `run_ollama_generate` tool (e.g., `gemma2:2b`, `llama2`). The primary LLM can override this.
+    *   `ANTHROPIC_API_KEY`: Your Anthropic API key (only needed if using "anthropic" provider).
+    *   `ANTHROPIC_MODEL_NAME`: Anthropic model to use if `PRIMARY_LLM_PROVIDER="anthropic"` (e.g., `claude-3-haiku-20240307`).
+    *   `DEFAULT_MAX_COMPUTE_LOOPS`: Default number of agent loops (can be overridden by `--compute` CLI argument).
 
-uv run sfa_ollama_delegator_agent.py \
-    --prompt "Please use the local model 'llama3' to write a short poem about coding. After you get the poem, tell me (as Claude) your thoughts on its style and creativity." \
-    --model claude-3-haiku-20240307
+#### Example Usage
+
+**1. Running with Ollama as the Primary LLM (Recommended for fully local execution):**
+
+Ensure your `.env` file is configured, for example:
+```
+# .env file
+PRIMARY_LLM_PROVIDER="ollama"
+OLLAMA_PRIMARY_MODEL_NAME="gemma2:9b" # Or your preferred capable local model
+OLLAMA_DEFAULT_DELEGATE_MODEL_NAME="gemma2:2b" # For the tool
+OLLAMA_BASE_URL="http://localhost:11434"
+# ANTHROPIC_API_KEY= (not needed)
 ```
 
-Command-line arguments:
+Then run:
+```bash
+uv run sfa_ollama_delegator_agent.py \
+    --prompt "Use the delegate model to write a short story about a brave robot. Then, as the primary agent (gemma2:9b), critique the story's plot and suggest three improvements."
+```
+*(If your primary Ollama model is powerful enough, it can perform complex reasoning and tool use with other local models.)*
+
+**2. Running with Anthropic Claude as the Primary LLM:**
+
+Ensure your `.env` file is configured, for example:
+```
+# .env file
+PRIMARY_LLM_PROVIDER="anthropic"
+ANTHROPIC_API_KEY="sk-ant-your-api-key-here"
+ANTHROPIC_MODEL_NAME="claude-3-haiku-20240307"
+OLLAMA_DEFAULT_DELEGATE_MODEL_NAME="gemma2:2b" # For the tool
+OLLAMA_BASE_URL="http://localhost:11434"
+```
+
+Then run:
+```bash
+uv run sfa_ollama_delegator_agent.py \
+    --prompt "Please use the local delegate Ollama model 'gemma2:2b' to write a short poem about coding. After you get the poem, tell me (as Claude) your thoughts on its style and creativity."
+```
+*(You can also override the primary provider and model via CLI: `--primary-provider anthropic --primary-model claude-3-opus-20240229`)*
+
+
+#### Command-Line Arguments
+CLI arguments override settings in the `.env` file.
 - `-p, --prompt`: (Required) The user's request to the agent.
-- `-m, --model`: The primary LLM model to use (e.g., `claude-3-haiku-20240307`). Defaults to `claude-3-haiku-20240307`.
-- `-c, --compute`: Maximum number of agent loops. Defaults to `7`.
-- `--ollama-base-url`: The base URL for the Ollama API. Defaults to `http://localhost:11434` or the value of the `OLLAMA_BASE_URL` environment variable.
+- `--primary-provider`: Choose the primary LLM provider: "ollama" or "anthropic". (Default: "ollama" or from `PRIMARY_LLM_PROVIDER` in `.env`).
+- `--primary-model`: Specify the model name for the primary LLM. (Default: from `OLLAMA_PRIMARY_MODEL_NAME` or `ANTHROPIC_MODEL_NAME` in `.env` based on provider).
+- `--ollama-base-url`: Base URL for the Ollama API. (Default: `http://localhost:11434` or from `OLLAMA_BASE_URL` in `.env`).
+- `-c, --compute`: Maximum number of agent loops. (Default: `7` or from `DEFAULT_MAX_COMPUTE_LOOPS` in `.env`).
 
 ### Git Agent
 > Up for a challenge?
