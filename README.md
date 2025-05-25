@@ -239,6 +239,34 @@ uv run sfa_meta_prompt_openai_v1.py \
 uv run sfa_meta_prompt_openai_v1.py
 ```
 
+### Ollama Delegator Agent
+> (sfa_ollama_delegator_agent.py)
+
+An AI assistant that uses a primary LLM (e.g., Anthropic Claude) to understand user requests and can delegate specific text generation or analysis tasks to a locally running Ollama instance. The primary LLM then processes or reflects on the output from the local Ollama model.
+
+Prerequisites:
+- Ollama installed and running (see [ollama.com](https://ollama.com/)).
+- At least one model pulled in your local Ollama instance (e.g., `ollama pull llama3`).
+- `ANTHROPIC_API_KEY` environment variable must be set for the primary LLM.
+- `OLLAMA_BASE_URL` environment variable (optional, defaults to `http://localhost:11434` if not set).
+
+Example Usage:
+```bash
+# Ensure Ollama is running and you have a model like 'llama3'
+# export ANTHROPIC_API_KEY="your_anthropic_key"
+# export OLLAMA_BASE_URL="http://localhost:11434" # Optional if Ollama is at default URL
+
+uv run sfa_ollama_delegator_agent.py \
+    --prompt "Please use the local model 'llama3' to write a short poem about coding. After you get the poem, tell me (as Claude) your thoughts on its style and creativity." \
+    --model claude-3-haiku-20240307
+```
+
+Command-line arguments:
+- `-p, --prompt`: (Required) The user's request to the agent.
+- `-m, --model`: The primary LLM model to use (e.g., `claude-3-haiku-20240307`). Defaults to `claude-3-haiku-20240307`.
+- `-c, --compute`: Maximum number of agent loops. Defaults to `7`.
+- `--ollama-base-url`: The base URL for the Ollama API. Defaults to `http://localhost:11434` or the value of the `OLLAMA_BASE_URL` environment variable.
+
 ### Git Agent
 > Up for a challenge?
 
