@@ -1,4 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = [
+#   "requests>=2.25.0"  # For Ollama communication
+# ]
+# ///
 import argparse
 import datetime
 import json
@@ -661,3 +666,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+[end of omni.py]
